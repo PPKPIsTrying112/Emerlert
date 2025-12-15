@@ -1,65 +1,52 @@
-# Emerlert
-Stay safe with instant emergency alerts. Trigger a quick alert to automatically call and text your emergency contacts with your exact GPS location. Your safety network, always one tap away.
+# 🚨 Emergency Alert System
 
-# Overview
-Users can trigger an emergency alert through a quick gesture (shake, volume buttons, or panic button). The app automatically:
+A full-stack mobile application designed to trigger rapid emergency communications. The app captures real-time GPS data and utilizes server-side logic to dispatch automated voice calls (Text-to-Speech) and SMS messages to designated emergency contacts.
 
-Generates a voice message with current GPS location using text-to-speech
-Initiates phone calls to emergency contacts with the automated voice message
-Sends SMS messages with GPS coordinates to all emergency contacts simultaneously
+## 🏗 Tech Stack
 
-# Tech Stack
-## Frontend
+* **Mobile:** React Native (TypeScript)
+* **Backend:** Next.js (API Routes)
+* **Database:** PostgreSQL (via Supabase)
+* **Telephony:** Twilio API (Voice & SMS)
+* **Location:** Google Maps API (Reverse Geocoding)
 
-React Native - Cross-platform mobile development (iOS + Android)
-TypeScript - Type-safe development
+## 📐 Architecture & Flow
 
-## Backend
+1.  **Trigger:** User activates the "Panic Button" in the mobile app.
+2.  **Payload:** App captures GPS (`lat`, `long`) and sends a secured `POST` request to the Next.js server.
+3.  **Process:**
+    * Server authenticates the user.
+    * Converts coordinates to a human-readable address (Reverse Geocoding).
+    * Fetches emergency contacts from PostgreSQL.
+4.  **Dispatch:**
+    * **Voice:** Initiates a Twilio call. When answered, a TTS (Text-to-Speech) engine reads the dynamic location script.
+    * **SMS:** Sends a text with a Google Maps link.
 
-Node.js/Express OR Supabase - Backend API and services
-PostgreSQL - Database for users, contacts, settings, and alert logs
+## 🚀 Getting Started
 
-## Third-Party Services
+### Prerequisites
+You will need API keys for the following services:
+* **Twilio:** Account SID, Auth Token, and a verified phone number.
+* **Google Maps Platform:** Geocoding API key.
+* **PostgreSQL:** Connection string (e.g., Supabase URL).
 
-Twilio - Voice calls and SMS delivery
-AWS Polly OR Google Text-to-Speech - Dynamic voice message generation
-React Native Geolocation - GPS location tracking
+### 1. Backend Setup (Next.js)
 
-# Key Features
-## Alert Triggers
+```bash
+# Clone the repo
+git clone [https://github.com/YOUR_USERNAME/REPO_NAME.git](https://github.com/YOUR_USERNAME/REPO_NAME.git)
+cd REPO_NAME/backend
 
-Shake gesture detection
-Volume button combination (3x press)
-Power button combination (3x press)
-In-app panic button
+# Install dependencies
+npm install
 
-## Alert Functionality
+# Setup Environment Variables
+# Create a .env.local file with:
+DATABASE_URL=postgresql://...
+TWILIO_ACCOUNT_SID=...
+TWILIO_AUTH_TOKEN=...
+TWILIO_PHONE_NUMBER=...
+GOOGLE_MAPS_API_KEY=...
 
-Automated voice calls with location readout
-Simultaneous SMS with GPS coordinates
-Customizable emergency contacts
-User-defined alert settings
-
-# Architecture 
-
-< soon to come >
-
-# Database Schema 
-Users
-
-id, email, phone, created_at
-
-Emergency Contacts
-
-id, user_id, name, phone, relationship
-
-Alert Settings
-
-id, user_id, message_template, trigger_type
-
-Alert Logs
-
-id, user_id, triggered_at, location, status
-
-# Getting Started
-
+# Run the server
+npm run dev
