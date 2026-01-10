@@ -1,8 +1,8 @@
-# 🚨 Emergency Alert System
+# Emergency Alert System
 
 A full-stack mobile application designed to trigger rapid emergency communications. The app captures real-time GPS data and utilizes server-side logic to dispatch automated voice calls (Text-to-Speech) and SMS messages to designated emergency contacts.
 
-## 🏗 Tech Stack
+## Tech Stack
 
 * **Mobile:** React Native (TypeScript)
 * **Backend:** Next.js (API Routes)
@@ -10,7 +10,7 @@ A full-stack mobile application designed to trigger rapid emergency communicatio
 * **Telephony:** Twilio API (Voice & SMS)
 * **Location:** Google Maps API (Reverse Geocoding)
 
-## 📐 Architecture & Flow
+## Architecture & Flow
 
 1.  **Trigger:** User activates the "Panic Button" in the mobile app.
 2.  **Payload:** App captures GPS (`lat`, `long`) and sends a secured `POST` request to the Next.js server.
@@ -22,7 +22,7 @@ A full-stack mobile application designed to trigger rapid emergency communicatio
     * **Voice:** Initiates a Twilio call. When answered, a TTS (Text-to-Speech) engine reads the dynamic location script.
     * **SMS:** Sends a text with a Google Maps link.
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 You will need API keys for the following services:
