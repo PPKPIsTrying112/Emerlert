@@ -1,12 +1,12 @@
-# 📋 User Stories & Acceptance Criteria
+# User Stories & Acceptance Criteria
 
 **Project:** Emergency Alert System
 **Status:** MVP Phase
-**Last Updated:** December 2025
+**Last Updated:** Jan 2025
 
 ---
 
-## 🟢 Epic 1: The Mobile Client (React Native)
+## 1: The Mobile Client (React Native)
 
 ### Story 1.1: The Secure Trigger Mechanism
 **As a** user in a high-stress situation,
@@ -45,7 +45,7 @@
 
 ---
 
-## 🔵 Epic 2: The Backend API (Next.js)
+## 2: The Backend API (Next.js)
 
 ### Story 2.1: Alert Ingestion API
 **As a** developer (system),
@@ -71,7 +71,7 @@
 
 ---
 
-## 🔴 Epic 3: Telephony Integration (Twilio)
+## 3: Telephony Integration (Twilio)
 
 ### Story 3.1: Automated Voice Call (TTS)
 **As a** emergency contact,
