@@ -1,37 +1,59 @@
 import { NextResponse } from 'next/server';
+import twilio from 'twilio';
 
-// This function handles "POST" requests (Sending data)
+// 1. Initialize the Twilio Client
+const client = twilio(
+  process.env.TWILIO_ACCOUNT_SID,
+  process.env.TWILIO_AUTH_TOKEN
+);
+
 export async function POST(request: Request) {
   try {
-    // 1. Read the incoming note (JSON)
     const body = await request.json();
-    const { userId, location } = body;
+    const { location } = body;
+    
+    // Safety Check
+    if (!location) return NextResponse.json({ error: 'No location' }, { status: 400 });
 
-    // 2. Validate the data (Security)
-    if (!userId || !location) {
-      return NextResponse.json(
-        { error: 'Missing userId or location' }, 
-        { status: 400 } // Bad Request
-      );
-    }
+    const mapLink = `https://www.google.com/maps?q=${location.lat},${location.lng}`;
+    
+    // -------------------------------------------------------
+    // A. SEND SMS (The "paper trail")
+    // -------------------------------------------------------
+    const sms = await client.messages.create({
+      body: `🚨 EMERGENCY ALERT 🚨\nUser triggered SOS.\nLocation: ${mapLink}`,
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: process.env.MY_PHONE_NUMBER!, // The person receiving the alert
+    });
+    console.log("✅ SMS Sent:", sms.sid);
 
-    // 3. The "Action" (For now, just log it)
-    console.log("🚨 ALERT RECEIVED:");
-    console.log(`- User: ${userId}`);
-    console.log(`- Location: ${location.lat}, ${location.lng}`);
+    // -------------------------------------------------------
+    // B. MAKE VOICE CALL (The "Wake Up" call)
+    // -------------------------------------------------------
+    // We construct the XML script here dynamically
+    const voiceScript = `
+      <Response>
+        <Say voice="alice" language="en-US">
+          This is an Emergency Alert. 
+          The user has triggered the panic button.
+          Their location is currently being tracked.
+          Check your text messages for the GPS link.
+          Repeating. This is an Emergency Alert.
+        </Say>
+      </Response>
+    `;
 
-    // 4. Return Success (200 OK)
-    // The mobile app waits for this "True" to show the Green Checkmark
-    return NextResponse.json({ success: true, timestamp: new Date() });
+    const call = await client.calls.create({
+      twiml: voiceScript, // <--- We inject the script directly!
+      from: process.env.TWILIO_PHONE_NUMBER,
+      to: process.env.MY_PHONE_NUMBER!,
+    });
+    console.log("✅ Call Started:", call.sid);
+
+    return NextResponse.json({ success: true, smsId: sms.sid, callId: call.sid });
 
   } catch (error) {
-    console.error("Server Error:", error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error("Dispatch Error:", error);
+    return NextResponse.json({ error: 'Failed to dispatch' }, { status: 500 });
   }
-}
-
-// This function handles "GET" requests (Checking status)
-// Try this in your browser: http://localhost:3000/api/trigger
-export async function GET() {
-  return NextResponse.json({ status: 'System Operational' });
 }

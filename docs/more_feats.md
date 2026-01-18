@@ -1,0 +1,13 @@
+Phase 1: The "Black Box" (Evidence)
+The Problem: In an assault or harassment scenario, it is your word against theirs. 911 calls are recorded, but only if you speak.Your Feature: Automatic Audio Evidence.How it works: The millisecond the trigger fires, your app silently records 15 seconds of ambient audio.The Code: Use expo-av.The Flow: Trigger $\to$ Start Recording $\to$ Upload to Cloud (S3/Firebase) $\to$ Append Audio Link to the SMS.Resume Flex: "Implemented background audio stream capture and cloud upload to preserve forensic evidence during emergencies."🔋 
+
+
+Phase 2: The "Rich Payload" (Context)
+The Problem: 911 knows where you are. They don't know how you are.Your Feature: Vital Status Telemetry.How it works: Your JSON payload currently sends { lat, lng }. Expand it.Add These:Battery Level: "User has 4% battery left." (Alerts the receiver to hurry).Speed: "User is moving at 60mph." (Indicates abduction in a vehicle).Altitude: "User is on the 4th floor." (GPS often misses verticality).1Resume Flex: "Engineered a rich telemetry payload including velocity, altitude, and device health to provide situational context to responders."🖱️ 
+
+Phase 3: The "Gadget" (The Speed King)
+The Problem: Unlocking a phone takes ~4 seconds. Too slow.Your Feature: Bluetooth Low Energy (BLE) Panic Button.The "Cheap" Way (Impressive): Buy a $5 Bluetooth Camera Shutter button from Amazon.The Logic: These buttons pretend to be a "Volume Up" key on a keyboard.The Implementation:Use react-native-keyevent or similar.Listen for "Volume Up."If "Volume Up" is pressed while app is backgrounded $\to$ TRIGGER.The "Pro" Way (Mind-Blowing): Build a custom ESP32 button (as we discussed). It uses BLE to wake the app up.Resume Flex: "Developed an IoT integration using Bluetooth Low Energy (BLE) to enable sub-second, screen-off activation via external hardware."⏱️ 
+
+
+Phase 4: The "Dead Man's Switch" (Proactive Safety)
+The Problem: Sometimes you can't press the button at all (e.g., walking into a dangerous meeting).Your Feature: Timer-Based Trigger.How it works:User sets timer: "I'm walking to my car (5 mins)."Server starts counting down.If User doesn't type a PIN code by 00:00 $\to$ Server triggers the alert automatically.Why it wins: This protects you even if your phone is destroyed. The timer lives on the Server (Backend), not the phone.Resume Flex: "Architected a server-side 'Dead Man’s Switch' using Cron jobs to trigger fail-safe alerts if user check-in is missed."
