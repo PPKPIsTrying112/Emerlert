@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Alert, Vibration } from 'react-native';
+// 1. IMPORT THE TOOLS
 import * as Linking from 'expo-linking';
 import * as Location from 'expo-location';
 
@@ -12,7 +13,7 @@ export default function App() {
   // SENT: Confirmed success from server.
   const [status, setStatus] = useState<'IDLE' | 'SENDING' | 'SENT'>('IDLE');
   
-  // Debugging: Shows your specific deep link scheme (e.g., "exp://..." or "emerlert://")
+  // Debugging: Shows your specific deep link scheme
   const urlScheme = Linking.createURL('');
 
   // ---------------------------------------------------------
@@ -21,15 +22,15 @@ export default function App() {
   useEffect(() => {
     // A. PERMISSIONS CHECK
     // Resume Bullet: "Proactive Permission Handling"
-    // We ask NOW so we don't block the user during an emergency.
     (async () => {
+      // We ask quietly on app load so we don't block emergencies later
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert("⚠️ Setup Required", "You MUST enable location for this app to save your life.");
+        Alert.alert("⚠️ Setup Required", "You MUST enable location for this app to work.");
       }
     })();
 
-    // B. DEEP LINK LISTENER (Siri / Widgets)
+    // B. DEEP LINK LISTENER (Siri / Shortcuts Integration)
     // Resume Bullet: "Deep Linking & System Integration"
     
     // 1. Cold Start: App was dead -> User used Siri -> App opens
@@ -53,26 +54,39 @@ export default function App() {
   // 3. THE TRIGGER LOGIC (The "Core Feature")
   // ---------------------------------------------------------
   const handleTrigger = async () => {
-    // Prevent double-clicks if already working
+    // Prevent double-clicks
     if (status !== 'IDLE') return;
 
-    // A. OPTIMISTIC UI UPDATE
-    // Resume Bullet: "Reduced Perceived Latency to <50ms"
-    // We turn the screen green BEFORE doing any heavy lifting.
+    // A. OPTIMISTIC UI (Resume Bullet: "<50ms Latency")
     setStatus('SENDING');
-    Vibration.vibrate(100); // Haptic feedback confirm
+    Vibration.vibrate(100);
 
     try {
-      // B. DATA COLLECTION (The Heavy Lifting)
-      // Grab GPS coordinates. 
-      // Note: We already asked for permission in useEffect, so this should be fast.
+      // 🛡️ SECURITY CHECKPOINT (The Fix for your crash) 🛡️
+      // We double-check permission right before sending.
+      const { status: existingStatus } = await Location.getForegroundPermissionsAsync();
+      let finalStatus = existingStatus;
+
+      // If missing, ask ONE LAST TIME
+      if (existingStatus !== 'granted') {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        finalStatus = status;
+      }
+
+      // If still missing, abort to prevent crash
+      if (finalStatus !== 'granted') {
+        Alert.alert("🚫 Permission Error", "Please go to Settings > Privacy and enable Location.");
+        setStatus('IDLE');
+        return;
+      }
+
+      // B. DATA COLLECTION
+      // Now it is safe to run this command
       let location = await Location.getCurrentPositionAsync({});
       console.log("📍 GPS Secured:", location.coords);
 
       // C. NETWORK REQUEST (The "Microservice" Call)
-      // We are sending this to your Next.js Backend
-      // TODO: Replace 'YOUR_IP' with your computer's local IP if testing on real phone
-      // Example: 'http://192.168.1.5:3000/api/trigger'
+      // ⚠️ IMPORTANT: I changed port 8082 back to 3000 because your backend screenshot said 3000.
       const response = await fetch('http://192.168.1.210:3000/api/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -97,8 +111,7 @@ export default function App() {
 
     } catch (error) {
       console.error("Transmission Failed:", error);
-      Alert.alert("❌ FAILED", "Could not reach server. Trying SMS fallback...");
-      // Resume Bullet: "Multi-Channel Failover" would trigger here
+      Alert.alert("❌ FAILED", "Could not reach server. Is the backend running?");
       setStatus('IDLE');
     }
   };
@@ -108,12 +121,11 @@ export default function App() {
   };
 
   // ---------------------------------------------------------
-  // 4. THE VISUALS (The "Face")
+  // 4. THE VISUALS
   // ---------------------------------------------------------
   return (
     <View style={[
       styles.container, 
-      // Dynamic Background Color based on State
       { backgroundColor: status === 'SENT' ? '#22c55e' : '#f2f2f2' }
     ]}>
       
@@ -141,25 +153,18 @@ export default function App() {
         </Text>
       </TouchableOpacity>
 
-      {/* Reset System (Only visible after sending) */}
+      {/* Reset System */}
       {status !== 'IDLE' && (
         <TouchableOpacity onPress={handleReset} style={styles.resetBtn}>
           <Text style={styles.resetText}>Reset System</Text>
         </TouchableOpacity>
       )}
 
-      {/* Debug Info (Remove before Resume Screenshot) */}
-      <Text style={styles.debugText}>
-        Link: {urlScheme}
-      </Text>
-
+      <Text style={styles.debugText}>Link: {urlScheme}</Text>
     </View>
   );
 }
 
-// ---------------------------------------------------------
-// 5. STYLES
-// ---------------------------------------------------------
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 

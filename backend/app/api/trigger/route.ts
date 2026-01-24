@@ -1,11 +1,21 @@
 import { NextResponse } from 'next/server';
 import twilio from 'twilio';
+import nodemailer from 'nodemailer';
 
-// 1. Initialize the Twilio Client
-const client = twilio(
+// 1. Initialize Twilio (For the VOICE CALL)
+const twilioClient = twilio(
   process.env.TWILIO_ACCOUNT_SID,
   process.env.TWILIO_AUTH_TOKEN
 );
+
+// 2. Initialize Email Transporter (For the DATA)
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_PASS?.replace(/\s+/g, ''), // Auto-removes spaces from the key
+  },
+});
 
 export async function POST(request: Request) {
   try {
@@ -15,42 +25,67 @@ export async function POST(request: Request) {
     // Safety Check
     if (!location) return NextResponse.json({ error: 'No location' }, { status: 400 });
 
+    // ✅ Google Maps Link
     const mapLink = `https://www.google.com/maps?q=${location.lat},${location.lng}`;
     
-    // -------------------------------------------------------
-    // A. SEND SMS (The "paper trail")
-    // -------------------------------------------------------
-    const sms = await client.messages.create({
-      body: `🚨 EMERGENCY ALERT 🚨\nUser triggered SOS.\nLocation: ${mapLink}`,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: process.env.MY_PHONE_NUMBER!, // The person receiving the alert
-    });
-    console.log("✅ SMS Sent:", sms.sid);
+    console.log("🚨 ALERT TRIGGERED! Dispatching Hybrid Alert...");
 
     // -------------------------------------------------------
-    // B. MAKE VOICE CALL (The "Wake Up" call)
+    // A. SEND EMAIL (Replaces SMS)
     // -------------------------------------------------------
-    // We construct the XML script here dynamically
+    const mailOptions = {
+      from: `"Emerlert Security" <${process.env.GMAIL_USER}>`,
+      to: process.env.GMAIL_USER, // Sending to YOURSELF for the demo
+      subject: "🚨 SOS: PANIC BUTTON PRESSED",
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 2px solid #ef4444; border-radius: 10px; background-color: #fff1f2;">
+          <h1 style="color: #ef4444; margin-top: 0;">🚨 EMERGENCY ALERT</h1>
+          <p style="font-size: 16px;">The Panic Button was triggered.</p>
+          
+          <div style="margin: 20px 0;">
+            <p><strong>Lat:</strong> ${location.lat}</p>
+            <p><strong>Lng:</strong> ${location.lng}</p>
+          </div>
+
+          <a href="${mapLink}" style="background-color: #ef4444; color: white; padding: 15px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+            📍 OPEN LIVE LOCATION
+          </a>
+          
+          <p style="color: #666; font-size: 12px; margin-top: 20px;">
+            Sent automatically by Emerlert System.
+          </p>
+        </div>
+      `,
+    };
+
+    // -------------------------------------------------------
+    // B. MAKE VOICE CALL (The "Wake Up")
+    // -------------------------------------------------------
     const voiceScript = `
       <Response>
         <Say voice="alice" language="en-US">
-          This is an Emergency Alert. 
-          The user has triggered the panic button.
-          Their location is currently being tracked.
-          Check your text messages for the GPS link.
-          Repeating. This is an Emergency Alert.
+          Emergency Alert. 
+          The panic button was triggered.
+          Please check your email immediately for the location map.
+          Repeating. Check your email for location data.
         </Say>
       </Response>
     `;
 
-    const call = await client.calls.create({
-      twiml: voiceScript, // <--- We inject the script directly!
-      from: process.env.TWILIO_PHONE_NUMBER,
-      to: process.env.MY_PHONE_NUMBER!,
-    });
-    console.log("✅ Call Started:", call.sid);
+    // Execute both in parallel (Faster!)
+    const [emailInfo, callInfo] = await Promise.all([
+      transporter.sendMail(mailOptions),
+      twilioClient.calls.create({
+        twiml: voiceScript,
+        from: process.env.TWILIO_PHONE_NUMBER!,
+        to: process.env.MY_PHONE_NUMBER!,
+      })
+    ]);
 
-    return NextResponse.json({ success: true, smsId: sms.sid, callId: call.sid });
+    console.log("✅ Email Sent ID:", emailInfo.messageId);
+    console.log("✅ Call Started SID:", callInfo.sid);
+
+    return NextResponse.json({ success: true });
 
   } catch (error) {
     console.error("Dispatch Error:", error);
