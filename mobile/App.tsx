@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Alert, Vibration } from 'react-native';
+import { Barometer } from 'expo-sensors';
+
+
 // 1. IMPORT THE TOOLS
 import * as Linking from 'expo-linking';
 import * as Location from 'expo-location';
+
+// Converts pressure reading to altitude in meters
+const pressureToAltitude = (pressure: number, seaLevelPressure: number): number => {
+  return 44330 * (1 - Math.pow(pressure / seaLevelPressure, 0.1903));
+};
 
 export default function App() {
   // ---------------------------------------------------------
@@ -12,7 +20,9 @@ export default function App() {
   // SENDING: The "Optimistic" state (Green button, but API is still thinking).
   // SENT: Confirmed success from server.
   const [status, setStatus] = useState<'IDLE' | 'SENDING' | 'SENT'>('IDLE');
-  
+  const [baroSubscription, setBaroSubscription] = useState(null);
+  const [floorEstimate, setFloorEstimate] = useState<number | null>(null);
+  const [currentPressure, setCurrentPressure] = useState<number | null>(null);
   // Debugging: Shows your specific deep link scheme
   const urlScheme = Linking.createURL('');
 
@@ -47,8 +57,45 @@ export default function App() {
       }
     });
 
+   Barometer.isAvailableAsync().then((available) => {
+      if (available) {
+        console.log('✅ Barometer available!');
+        const sub = Barometer.addListener((data) => {
+          setCurrentPressure(data.pressure); // Save the latest reading
+          console.log('📊 Pressure:', data.pressure, 'hPa');
+        });
+        setBaroSubscription(sub);
+      } else {
+        console.log('❌ Barometer not available on this device');
+      }
+    });
     return () => subscription.remove();
   }, []);
+
+  // Calculate floor estimate using barometer + APIs
+  const calculateFloor = async (lat: number, lng: number) => {
+  if (!currentPressure) return null;
+
+  try {
+    const response = await fetch('http://192.168.1.210:3000/api/calculate-floor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        lat,
+        lng,
+        pressure: currentPressure
+      })
+    });
+
+    const data = await response.json();
+    console.log('🏢 Floor estimate:', data.floor);
+    return data.floor;
+
+  } catch (error) {
+    console.error('Floor calculation failed:', error);
+    return null;
+  }
+  };
 
   // ---------------------------------------------------------
   // 3. THE TRIGGER LOGIC (The "Core Feature")
@@ -85,6 +132,10 @@ export default function App() {
       let location = await Location.getCurrentPositionAsync({});
       console.log("📍 GPS Secured:", location.coords);
 
+      // Calculate floor estimate
+      const floor = await calculateFloor(location.coords.latitude, location.coords.longitude);
+      console.log("🏢 Estimated floor:", floor);
+
       // C. NETWORK REQUEST (The "Microservice" Call)
       // ⚠️ IMPORTANT: I changed port 8082 back to 3000 because your backend screenshot said 3000.
       const response = await fetch('http://192.168.1.210:3000/api/trigger', {
@@ -95,7 +146,8 @@ export default function App() {
           location: {
             lat: location.coords.latitude,
             lng: location.coords.longitude
-          }
+          },
+          floor: floor
         })
       });
 
@@ -119,6 +171,8 @@ export default function App() {
   const handleReset = () => {
     setStatus('IDLE');
   };
+
+  
 
   // ---------------------------------------------------------
   // 4. THE VISUALS

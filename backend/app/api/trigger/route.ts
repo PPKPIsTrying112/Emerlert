@@ -20,22 +20,23 @@ const transporter = nodemailer.createTransport({
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { location } = body;
+    const { location, floor } = body;  // ← Add floor here
     
-    // Safety Check
     if (!location) return NextResponse.json({ error: 'No location' }, { status: 400 });
 
-    // ✅ Google Maps Link
     const mapLink = `https://www.google.com/maps?q=${location.lat},${location.lng}`;
+    
+    // Floor display text
+    const floorText = floor !== null && floor !== undefined 
+      ? `Floor ${floor}` 
+      : 'Floor unknown';
     
     console.log("🚨 ALERT TRIGGERED! Dispatching Hybrid Alert...");
 
-    // -------------------------------------------------------
-    // A. SEND EMAIL (Replaces SMS)
-    // -------------------------------------------------------
+    // Updated email with floor info
     const mailOptions = {
       from: `"Emerlert Security" <${process.env.GMAIL_USER}>`,
-      to: process.env.GMAIL_USER, // Sending to YOURSELF for the demo
+      to: process.env.GMAIL_USER,
       subject: "🚨 SOS: PANIC BUTTON PRESSED",
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; border: 2px solid #ef4444; border-radius: 10px; background-color: #fff1f2;">
@@ -45,6 +46,7 @@ export async function POST(request: Request) {
           <div style="margin: 20px 0;">
             <p><strong>Lat:</strong> ${location.lat}</p>
             <p><strong>Lng:</strong> ${location.lng}</p>
+            <p><strong>Estimated Floor:</strong> ${floorText}</p>
           </div>
 
           <a href="${mapLink}" style="background-color: #ef4444; color: white; padding: 15px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
@@ -58,21 +60,19 @@ export async function POST(request: Request) {
       `,
     };
 
-    // -------------------------------------------------------
-    // B. MAKE VOICE CALL (The "Wake Up")
-    // -------------------------------------------------------
+    // Updated voice script with floor
     const voiceScript = `
       <Response>
         <Say voice="alice" language="en-US">
           Emergency Alert. 
           The panic button was triggered.
+          Estimated location: ${floorText}.
           Please check your email immediately for the location map.
           Repeating. Check your email for location data.
         </Say>
       </Response>
     `;
 
-    // Execute both in parallel (Faster!)
     const [emailInfo, callInfo] = await Promise.all([
       transporter.sendMail(mailOptions),
       twilioClient.calls.create({
