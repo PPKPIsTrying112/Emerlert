@@ -204,7 +204,7 @@ Calculates floor estimate from barometer reading.
 }
 ```
 
-## Resume-Ready Metrics (In Progress)
+## Metrics (In Progress)
 
 ### Latency (Complete)
 **Goal:** "<50ms perceived emergency trigger latency"
