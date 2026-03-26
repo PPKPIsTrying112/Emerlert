@@ -1,9 +1,14 @@
 # Emerlert (Emergency + Alert)
 
-It's 11pm. You are all alone in an alley. Coming back home from work. You are scared and you start to overthink. *"What if someone sneaks behind my back? What's my escape plan? Am I supposed to pull out my phone and push some buttons to ask for help?"*
-And this is what actually happens. First you unlock your phone. Then you navigate to your dial pad. You dial 911. You wait for dispatch to pick up (the benchmark is 15 seconds, but that's just the answer time and call *processing* alone averages 75–90 seconds). Then you have to verbally explain your emergency, give your location, and wait for units to be dispatched. Average police response after all that? Roughly 10 minutes, and that's for high-priority calls. And that's assuming you could even get the words out clearly. Under acute stress, once your heart rate exceeds 115 bpm your body begins losing fine motor control which is what you need to navigate a screen, dial digits, and type an address while shaking. Your brain is literally working against you.
+It's 11pm. You are all alone in an alley. Coming back home from work. You are scared and you start to overthink. "What if someone sneaks behind my back?" Tries to strangle you or whatever horror stuff that you can think of. "What am I supposed to do to ask for help?" 
 
-This is where Emerlert comes in. One tap. That's it. The app immediately captures your precise GPS location and floor level, calls your emergency contacts with an automated voice readout of exactly where you are, and sends them an email with a live Google Maps link all at the same time and in under 50ms of perceived latency. No talking. No typing. No navigating menus. One tap while everything else happens for you during your distress. 
+Our escape plan is probably to use our phone. But using our phone requires us to think. And thinking clearly is exactly what our body is sabotaging right now.
+
+The moment real fear kicks in, your heart rate spikes past 115 bpm. At that point your body starts pulling blood away from your fingers and into your major organs. Your hands begin to shake. The fine motor control you need to unlock a screen, navigate to a dial pad, and punch in digits is gone. A lot of variables that could contribute to the latency.
+
+And let's say you push through that and actually get 911 dialing. You're not done. Call processing alone averages 75 to 90 seconds before anyone is even dispatched. Then you wait. Average police response for a high-priority call? Around 10 minutes. That's 10 minutes of staying calm, staying hidden, staying on the line while everything in your body is screaming at you to run.
+
+This is where my passion project comes in. "Emerlert". Just one tap and help's on your way. The app captures your exact GPS location and floor level, calls your emergency contacts with an automated voice readout of exactly where you are, and sends them a Google Maps link all at the same time, all while you keep your eyes up and your head clear. No talking. No typing. No menus. Just one tap while everything else happens for you and the help is on your way. 
 
 ## Overview
 
