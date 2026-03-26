@@ -1,6 +1,9 @@
-# Emergency Alert App (Emerlert)
+# Emerlert (Emergency + Alert)
 
-A mobile emergency alert application that sends automated calls and email notifications to emergency contacts with real-time GPS location and floor-level precision.
+It's 11pm. You are all alone in an alley. Coming back home from work. You are scared and you start to overthink. *"What if someone sneaks behind my back? What's my escape plan? Am I supposed to pull out my phone and push some buttons to ask for help?"*
+And this is what actually happens. First you unlock your phone. Then you navigate to your dial pad. You dial 911. You wait for dispatch to pick up (the benchmark is 15 seconds, but that's just the answer time and call *processing* alone averages 75–90 seconds). Then you have to verbally explain your emergency, give your location, and wait for units to be dispatched. Average police response after all that? Roughly 10 minutes, and that's for high-priority calls. And that's assuming you could even get the words out clearly. Under acute stress, once your heart rate exceeds 115 bpm your body begins losing fine motor control which is what you need to navigate a screen, dial digits, and type an address while shaking. Your brain is literally working against you.
+
+This is where Emerlert comes in. One tap. That's it. The app immediately captures your precise GPS location and floor level, calls your emergency contacts with an automated voice readout of exactly where you are, and sends them an email with a live Google Maps link all at the same time and in under 50ms of perceived latency. No talking. No typing. No navigating menus. One tap while everything else happens for you during your distress. 
 
 ## Overview
 
@@ -25,10 +28,10 @@ Users can trigger an emergency alert with a single tap. The app automatically:
 - **TypeScript** - Type-safe development
 
 ### Third-Party Services
-- **Twilio** - Voice calls (Text-to-Speech)
-- **Nodemailer (Gmail SMTP)** - Email delivery
-- **OpenWeatherMap API** - Real-time sea-level pressure data
-- **Open Elevation API** - Ground elevation for floor calculation
+- **Twilio** - Voice calls (Text-to-Speech). Chosen for its reliability and programmable voice API — a voice call carries more urgency and information density than a text, and Twilio's TTS handles the location readout without requiring the user to record anything.
+- **Nodemailer (Gmail SMTP)** - Email delivery for the map link and floor data. Gmail SMTP keeps the barrier to entry low for a prototype; the plan is to migrate to SendGrid for production-level deliverability.
+- **OpenWeatherMap API** - Real-time sea-level pressure data, which is the reference point the floor algorithm needs to be accurate regardless of weather conditions.
+- **Open Elevation API** - Ground elevation to separate building height from terrain height in the floor calculation.
 
 ## Key Features
 
@@ -80,6 +83,8 @@ Users can trigger an emergency alert with a single tap. The app automatically:
 
 ## Floor Detection Algorithm
 
+GPS alone can't tell you what floor you're on as vertical accuracy from satellite signals is too coarse for that. Barometric pressure changes measurably with altitude, so by combining the phone's pressure sensor with the current sea-level reference from OpenWeatherMap and the ground elevation from Open Elevation, we can isolate the height above ground and convert it to an estimated floor. It's accurate to ±1–2 floors, which is enough to tell first responders whether you're on the ground level or the 8th floor of a building.
+
 ```
 1. Barometer → Current air pressure (hPa)
 2. GPS → Latitude/Longitude
@@ -90,7 +95,7 @@ Users can trigger an emergency alert with a single tap. The app automatically:
 7. Estimated floor = height ÷ 3.5m (average floor height)
 ```
 
-## Database Schema (PostgreSQL - Planned)
+## Database Schema (PostgreSQL)
 
 ### Users
 - `id`, `email`, `phone`, `created_at`
@@ -113,19 +118,6 @@ Users can trigger an emergency alert with a single tap. The app automatically:
 - Twilio account
 - OpenWeatherMap API key (free tier)
 - Gmail account (for SMTP)
-
-### Environment Variables
-
-**Backend (`/backend/.env.local`):**
-```bash
-TWILIO_ACCOUNT_SID=your_twilio_sid
-TWILIO_AUTH_TOKEN=your_twilio_token
-TWILIO_PHONE_NUMBER=+1234567890
-MY_PHONE_NUMBER=+1234567890
-GMAIL_USER=your-email@gmail.com
-GMAIL_PASS=your-app-password
-OPENWEATHER_API_KEY=your_openweather_key
-```
 
 ### Installation
 
@@ -204,32 +196,14 @@ Calculates floor estimate from barometer reading.
 }
 ```
 
-## Metrics (In Progress)
-
-### Latency (Complete)
-**Goal:** "<50ms perceived emergency trigger latency"
-- Optimistic UI updates state immediately
-- Background API processing doesn't block user feedback
-
-### Reliability (In Progress)
-**Goal:** "99.9% alert delivery rate with multi-channel failover"
-- Needs: Alert logging + SMS → Voice fallback
-
-### Scalability (Planned)
-**Goal:** "Handles 50+ concurrent requests with <200ms response time"
-- Needs: Load testing with Artillery.io
-
-### Security (Planned)
-**Goal:** "Row-Level Security for location data isolation"
-- Needs: Supabase RLS implementation
-
 ## Known Issues & Limitations
 
 - Floor detection accuracy ±1-2 floors (depends on weather, building construction)
-- Gmail SMTP may hit rate limits (consider SendGrid for production)
+- Gmail SMTP may hit rate limits at scale — SendGrid recommended for production
 - Twilio free trial limits voice call duration
 - Open Elevation API can be slow (~1s response time)
 
 ## License
 
 MIT
+
