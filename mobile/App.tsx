@@ -23,6 +23,8 @@ export default function App() {
   const [baroSubscription, setBaroSubscription] = useState(null);
   const [floorEstimate, setFloorEstimate] = useState<number | null>(null);
   const [currentPressure, setCurrentPressure] = useState<number | null>(null);
+
+  
   // Debugging: Shows your specific deep link scheme
   const urlScheme = Linking.createURL('');
 
@@ -59,14 +61,14 @@ export default function App() {
 
    Barometer.isAvailableAsync().then((available) => {
       if (available) {
-        console.log('✅ Barometer available!');
+        console.log('Nice! Barometer available!');
         const sub = Barometer.addListener((data) => {
           setCurrentPressure(data.pressure); // Save the latest reading
           console.log('📊 Pressure:', data.pressure, 'hPa');
         });
         setBaroSubscription(sub);
       } else {
-        console.log('❌ Barometer not available on this device');
+        console.log('X: Barometer not available on this device');
       }
     });
     return () => subscription.remove();
@@ -77,7 +79,7 @@ export default function App() {
   if (!currentPressure) return null;
 
   try {
-    const response = await fetch('http://192.168.1.210:3000/api/calculate-floor', {
+    const response = await fetch('https://emerlert-t3b6.vercel.app/api/calculate-floor', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -138,7 +140,7 @@ export default function App() {
 
       // C. NETWORK REQUEST (The "Microservice" Call)
       // ⚠️ IMPORTANT: I changed port 8082 back to 3000 because your backend screenshot said 3000.
-      const response = await fetch('http://192.168.1.210:3000/api/trigger', {
+      const response = await fetch('https://emerlert-t3b6.vercel.app/api/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

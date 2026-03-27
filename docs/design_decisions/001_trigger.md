@@ -13,3 +13,9 @@ Resume Value: Very High. Shows "Accessibility" and "System Integration."
 The Tech: This is actually the same tech as the Widget. Both use the "Doorbell" (Deep Link) method we discussed.
 
 Apple and Google block standard apps from taking over the Power Button so we will omit these otpiosn for now 
+
+How it works:
+- Siri: User says "Red Alert."
+- iOS: Siri looks up the "Red Alert" Shortcut.
+- Shortcut: The Shortcut's action is "Open URL: emerlert://trigger".
+- React Native: Your app wakes up, sees the URL, and fires the function.
