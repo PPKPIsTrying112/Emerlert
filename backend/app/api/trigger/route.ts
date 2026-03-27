@@ -23,20 +23,20 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { userId, location, floor } = body;
-    
+
     if (!location) return NextResponse.json({ error: 'No location' }, { status: 400 });
 
     const mapLink = `https://www.google.com/maps?q=${location.lat},${location.lng}`;
     const floorText = floor !== null && floor !== undefined ? `Floor ${floor}` : 'Floor unknown';
-    
-    // 1. LOG THE ATTEMPT IMMEDIATELY
+
+    // 1. LOG THE ATTEMPT
     const { data: alertRecord, error: insertError } = await supabase
       .from('alerts')
       .insert({
         user_id: userId,
         latitude: location.lat,
         longitude: location.lng,
-        floor: floor,
+        floor,
         status: 'pending',
         channels_used: []
       })
@@ -47,33 +47,46 @@ export async function POST(request: Request) {
       console.error('Failed to log alert:', insertError);
     } else {
       alertId = alertRecord.id;
-      console.log('🚨 Alert logged with ID:', alertId);
+      console.log('Alert logged with ID:', alertId);
     }
 
-    console.log("🚨 ALERT TRIGGERED! Dispatching...");
+    // 2. FETCH EMERGENCY CONTACTS
+    const { data: contacts, error: contactsError } = await supabase
+      .from('emergency_contacts')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (contactsError) console.error('Failed to fetch contacts:', contactsError);
+
+    // Fall back to env variables if no contacts saved yet
+    const phoneNumbers = contacts && contacts.length > 0
+      ? contacts.map((c: any) => c.phone)
+      : [process.env.MY_PHONE_NUMBER!];
+
+    const emailTo = process.env.GMAIL_USER!;
+
+    console.log(`Alerting ${phoneNumbers.length} contact(s)...`);
+
+    // 3. DISPATCH TO ALL CONTACTS
+    const channelsUsed: string[] = [];
+    let errorMessage: string | null = null;
 
     const mailOptions = {
       from: `"Emerlert Security" <${process.env.GMAIL_USER}>`,
-      to: process.env.GMAIL_USER,
-      subject: "🚨 SOS: PANIC BUTTON PRESSED",
+      to: emailTo,
+      subject: "SOS: PANIC BUTTON PRESSED",
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px; border: 2px solid #ef4444; border-radius: 10px; background-color: #fff1f2;">
-          <h1 style="color: #ef4444; margin-top: 0;">🚨 EMERGENCY ALERT</h1>
+          <h1 style="color: #ef4444; margin-top: 0;">EMERGENCY ALERT</h1>
           <p style="font-size: 16px;">The Panic Button was triggered.</p>
-          
           <div style="margin: 20px 0;">
             <p><strong>Lat:</strong> ${location.lat}</p>
             <p><strong>Lng:</strong> ${location.lng}</p>
             <p><strong>Estimated Floor:</strong> ${floorText}</p>
           </div>
-
           <a href="${mapLink}" style="background-color: #ef4444; color: white; padding: 15px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-            📍 OPEN LIVE LOCATION
+            OPEN LIVE LOCATION
           </a>
-          
-          <p style="color: #666; font-size: 12px; margin-top: 20px;">
-            Sent automatically by Emerlert System.
-          </p>
         </div>
       `,
     };
@@ -90,42 +103,42 @@ export async function POST(request: Request) {
       </Response>
     `;
 
-    // 2. TRY TO SEND BOTH CHANNELS
-    const channelsUsed: string[] = [];
-    let errorMessage: string | null = null;
-
-    const results = await Promise.allSettled([
-      transporter.sendMail(mailOptions),
+    // Send email + calls to all contacts in parallel
+    const callPromises = phoneNumbers.map(phone =>
       twilioClient.calls.create({
         twiml: voiceScript,
         from: process.env.TWILIO_PHONE_NUMBER!,
-        to: process.env.MY_PHONE_NUMBER!,
+        to: phone,
       })
+    );
+
+    const results = await Promise.allSettled([
+      transporter.sendMail(mailOptions),
+      ...callPromises
     ]);
 
-    // Check email result
+    // Check email
     if (results[0].status === 'fulfilled') {
       channelsUsed.push('email');
-      console.log("✅ Email Sent ID:", results[0].value.messageId);
+      console.log('Email sent');
     } else {
       errorMessage = `Email failed: ${results[0].reason}`;
-      console.error("❌ Email Failed:", results[0].reason);
+      console.error('Email failed:', results[0].reason);
     }
 
-    // Check call result
-    if (results[1].status === 'fulfilled') {
-      channelsUsed.push('voice');
-      console.log("✅ Call Started SID:", results[1].value.sid);
-    } else {
-      errorMessage = errorMessage 
-        ? `${errorMessage}; Voice failed: ${results[1].reason}`
-        : `Voice failed: ${results[1].reason}`;
-      console.error("❌ Call Failed:", results[1].reason);
-    }
+    // Check calls
+    results.slice(1).forEach((result, i) => {
+      if (result.status === 'fulfilled') {
+        channelsUsed.push(`voice:${phoneNumbers[i]}`);
+        console.log(`Call started for ${phoneNumbers[i]}`);
+      } else {
+        console.error(`Call failed for ${phoneNumbers[i]}:`, result.reason);
+      }
+    });
 
-    // 3. UPDATE THE LOG WITH RESULTS
+    // 4. UPDATE LOG
     const finalStatus = channelsUsed.length > 0 ? 'success' : 'failed';
-    
+
     if (alertId) {
       await supabase
         .from('alerts')
@@ -138,19 +151,19 @@ export async function POST(request: Request) {
     }
 
     const duration = Date.now() - startTime;
-    console.log(`⏱️ Alert completed in ${duration}ms with status: ${finalStatus}`);
+    console.log(`Alert completed in ${duration}ms — ${phoneNumbers.length} contact(s) alerted`);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: channelsUsed.length > 0,
       alertId,
       channelsUsed,
+      contactsAlerted: phoneNumbers.length,
       duration
     });
 
   } catch (error) {
-    console.error("Dispatch Error:", error);
-    
-    // Log the failure
+    console.error('Dispatch Error:', error);
+
     if (alertId) {
       await supabase
         .from('alerts')
@@ -160,7 +173,7 @@ export async function POST(request: Request) {
         })
         .eq('id', alertId);
     }
-    
+
     return NextResponse.json({ error: 'Failed to dispatch' }, { status: 500 });
   }
 }
